@@ -1,8 +1,8 @@
 import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from './auth';
-import { ApiError } from '../utils/errors';
+import { AuthenticatedRequest } from './auth.js';
+import { ApiError } from '../utils/errors.js';
 import { Role } from '@prisma/client';
-import { prisma } from '../config/prisma';
+import { prisma } from '../config/prisma.js';
 
 export function requireRole(allowedRoles: Role[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -22,7 +22,6 @@ export function requireRole(allowedRoles: Role[]) {
   };
 }
 
-// Middleware to ensure PM can only access projects they created, or Admin can access all
 export async function verifyProjectAccess(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!req.user) return next(ApiError.unauthorized());
 
@@ -32,7 +31,6 @@ export async function verifyProjectAccess(req: AuthenticatedRequest, res: Respon
     return next(ApiError.badRequest('Project ID is required'));
   }
 
-  // Admin has global access
   if (req.user.role === Role.ADMIN) {
     return next();
   }
@@ -45,7 +43,6 @@ export async function verifyProjectAccess(req: AuthenticatedRequest, res: Respon
     return next(ApiError.notFound('Project not found'));
   }
 
-  // PM can only manage their own projects
   if (req.user.role === Role.PROJECT_MANAGER) {
     if (project.createdById !== req.user.userId) {
       return next(ApiError.forbidden('Forbidden: PM cannot access projects created by another PM'));
@@ -53,7 +50,6 @@ export async function verifyProjectAccess(req: AuthenticatedRequest, res: Respon
     return next();
   }
 
-  // Developer can access project if assigned to at least one task in that project
   if (req.user.role === Role.DEVELOPER) {
     const assignedTask = await prisma.task.findFirst({
       where: {

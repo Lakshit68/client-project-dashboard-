@@ -1,10 +1,10 @@
 import { Router, Response, NextFunction } from 'express';
-import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth';
-import { requireRole } from '../middleware/rbac';
+import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.js';
+import { requireRole } from '../middleware/rbac.js';
 import { Role, TaskStatus, TaskPriority } from '@prisma/client';
-import { prisma } from '../config/prisma';
-import { ApiError } from '../utils/errors';
-import { socketService } from '../services/socket.service';
+import { prisma } from '../config/prisma.js';
+import { ApiError } from '../utils/errors.js';
+import { socketService } from '../services/socket.service.js';
 import { z } from 'zod';
 
 const router = Router();

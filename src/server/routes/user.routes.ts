@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
-import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth';
-import { prisma } from '../config/prisma';
+import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.js';
+import { prisma } from '../config/prisma.js';
 import { Role } from '@prisma/client';
 
 const router = Router();

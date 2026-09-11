@@ -1,9 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
-import { prisma } from '../config/prisma';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
-import { ApiError } from '../utils/errors';
-import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth';
+import { prisma } from '../config/prisma.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
+import { ApiError } from '../utils/errors.js';
+import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.js';
 import { z } from 'zod';
 
 const router = Router();

@@ -11,8 +11,7 @@
     "noImplicitReturns": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "allowImportingTsExtensions": false,
-    "noEmit": false
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src/server/**/*"]
 }

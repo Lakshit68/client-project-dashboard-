@@ -1,16 +1,16 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { env } from './config/env';
-import { errorHandler } from './middleware/errorHandler';
+import { env } from './config/env.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
-import authRoutes from './routes/auth.routes';
-import clientRoutes from './routes/client.routes';
-import projectRoutes from './routes/project.routes';
-import taskRoutes from './routes/task.routes';
-import activityRoutes from './routes/activity.routes';
-import notificationRoutes from './routes/notification.routes';
-import userRoutes from './routes/user.routes';
+import authRoutes from './routes/auth.routes.js';
+import clientRoutes from './routes/client.routes.js';
+import projectRoutes from './routes/project.routes.js';
+import taskRoutes from './routes/task.routes.js';
+import activityRoutes from './routes/activity.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+import userRoutes from './routes/user.routes.js';
 
 const app = express();
 

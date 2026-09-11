@@ -1,17 +1,15 @@
 import cron from 'node-cron';
-import { prisma } from '../config/prisma';
+import { prisma } from '../config/prisma.js';
 import { TaskStatus } from '@prisma/client';
-import { socketService } from './socket.service';
+import { socketService } from './socket.service.js';
 
 export function startOverdueTaskScheduler() {
   console.log('⏰ Starting Overdue Task Scheduler cron job (runs every minute)...');
 
-  // Run every minute: '* * * * *'
   cron.schedule('* * * * *', async () => {
     try {
       const now = new Date();
 
-      // Find tasks where dueDate < now, status != DONE, and isOverdue is false
       const overdueTasks = await prisma.task.findMany({
         where: {
           dueDate: { lt: now },
@@ -29,7 +27,6 @@ export function startOverdueTaskScheduler() {
       console.log(`⏰ Cron Job: Flagging ${overdueTasks.length} task(s) as OVERDUE...`);
 
       for (const task of overdueTasks) {
-        // Update task isOverdue flag
         const updatedTask = await prisma.task.update({
           where: { id: task.id },
           data: { isOverdue: true },
@@ -39,7 +36,6 @@ export function startOverdueTaskScheduler() {
           },
         });
 
-        // Record system activity log for overdue event
         const activityLog = await prisma.activityLog.create({
           include: {
             user: { select: { id: true, name: true, role: true } },
@@ -48,7 +44,7 @@ export function startOverdueTaskScheduler() {
           data: {
             projectId: task.projectId,
             taskId: task.id,
-            userId: task.project.createdById, // System/PM reference
+            userId: task.project.createdById,
             action: 'OVERDUE_FLAGGED',
             oldStatus: task.status,
             newStatus: task.status,
@@ -56,11 +52,9 @@ export function startOverdueTaskScheduler() {
           },
         });
 
-        // Broadcast real-time activity and task update over socket
         socketService.broadcastActivity(activityLog, task.projectId, task.assignedToId);
         socketService.emitTaskUpdate(task.projectId, updatedTask);
 
-        // Notify assigned dev if any
         if (task.assignedToId) {
           const notif = await prisma.notification.create({
             data: {
@@ -73,7 +67,6 @@ export function startOverdueTaskScheduler() {
           socketService.sendNotification(task.assignedToId, notif);
         }
 
-        // Notify PM creator
         const pmNotif = await prisma.notification.create({
           data: {
             userId: task.project.createdById,

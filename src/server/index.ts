@@ -1,8 +1,8 @@
 import http from 'http';
-import app from './app';
-import { env } from './config/env';
-import { socketService } from './services/socket.service';
-import { startOverdueTaskScheduler } from './services/scheduler.service';
+import app from './app.js';
+import { env } from './config/env.js';
+import { socketService } from './services/socket.service.js';
+import { startOverdueTaskScheduler } from './services/scheduler.service.js';
 
 const server = http.createServer(app);
 

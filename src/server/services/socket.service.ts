@@ -1,9 +1,9 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { verifyAccessToken, TokenPayload } from '../utils/jwt';
-import { env } from '../config/env';
+import { verifyAccessToken, TokenPayload } from '../utils/jwt.js';
+import { env } from '../config/env.js';
 import { Role } from '@prisma/client';
-import { prisma } from '../config/prisma';
+import { prisma } from '../config/prisma.js';
 
 export interface AuthenticatedSocket extends Socket {
   user?: TokenPayload;
@@ -11,7 +11,7 @@ export interface AuthenticatedSocket extends Socket {
 
 class SocketService {
   private io: SocketIOServer | null = null;
-  private onlineUsers = new Map<string, Set<string>>(); // userId -> Set of socketIds
+  private onlineUsers = new Map<string, Set<string>>();
 
   public init(httpServer: HttpServer) {
     this.io = new SocketIOServer(httpServer, {
@@ -21,7 +21,6 @@ class SocketService {
       },
     });
 
-    // JWT Authentication middleware on Socket Handshake
     this.io.use((socket: AuthenticatedSocket, next) => {
       const token =
         socket.handshake.auth?.token ||
@@ -45,39 +44,32 @@ class SocketService {
       const user = socket.user!;
       console.log(`🔌 Socket connected: ${user.name} (${user.role}) [ID: ${socket.id}]`);
 
-      // Track online status
       if (!this.onlineUsers.has(user.userId)) {
         this.onlineUsers.set(user.userId, new Set());
       }
       this.onlineUsers.get(user.userId)!.add(socket.id);
 
-      // Broadcast updated active online user count
       this.broadcastPresence();
 
-      // Join user personal room for targeted notifications
       socket.join(`user:${user.userId}`);
 
-      // Room subscriptions according to role
       if (user.role === Role.ADMIN) {
         socket.join('global:activity');
       } else if (user.role === Role.PROJECT_MANAGER) {
-        // PM joins rooms for all projects they created
         const pmProjects = await prisma.project.findMany({
           where: { createdById: user.userId },
           select: { id: true },
         });
-        pmProjects.forEach((p) => socket.join(`project:${p.id}`));
+        pmProjects.forEach((p: { id: string }) => socket.join(`project:${p.id}`));
       } else if (user.role === Role.DEVELOPER) {
-        // Developer joins rooms for projects where they have assigned tasks
         const devTasks = await prisma.task.findMany({
           where: { assignedToId: user.userId },
           select: { projectId: true },
           distinct: ['projectId'],
         });
-        devTasks.forEach((t) => socket.join(`project:${t.projectId}`));
+        devTasks.forEach((t: { projectId: string }) => socket.join(`project:${t.projectId}`));
       }
 
-      // Allow manually joining a specific project room when opening project detail view
       socket.on('join:project', (projectId: string) => {
         socket.join(`project:${projectId}`);
       });
@@ -116,13 +108,9 @@ class SocketService {
   public broadcastActivity(activityLog: any, projectId: string, assignedDevId?: string | null) {
     if (!this.io) return;
 
-    // 1. Send to global activity (Admins)
     this.io.to('global:activity').emit('activity:new', activityLog);
-
-    // 2. Send to project room (PM & viewing Devs)
     this.io.to(`project:${projectId}`).emit('activity:new', activityLog);
 
-    // 3. Send to assigned developer's personal room if set
     if (assignedDevId) {
       this.io.to(`user:${assignedDevId}`).emit('activity:new', activityLog);
     }
