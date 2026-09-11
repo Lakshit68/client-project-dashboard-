@@ -1,4 +1,4 @@
-# NexusAgency - Real-Time Client Project Dashboard
+# Real-Time Client Project Dashboard
 
 A production-grade full-stack web application for agencies to manage client projects, track task progress, enforce strict Role-Based Access Control (RBAC), and monitor team activity via real-time WebSocket feeds and background task scheduling.
 
