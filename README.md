@@ -166,7 +166,7 @@ npm run dev:local
 
 ---
 
-## 💡 Engineering Explanation & Hardest Problem Solved (150–250 Words)
+## 💡 Engineering Explanation & Hardest Problem Solved
 
 > **The hardest problem solved** was architecting the real-time role-filtered activity feed and state recovery mechanism. Because users of different roles (Admin, PM, Developer) have strictly isolated data permissions, emitting a single global WebSocket event to all connected sockets would violate role security boundaries. We solved this by implementing Socket.io **Room Isolation**:
 >
