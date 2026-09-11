@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: agency_dashboard_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agency_dashboard
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: agency_dashboard_app
+    restart: always
+    ports:
+      - '4000:4000'
+      - '3000:3000'
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/agency_dashboard?schema=public"
+      JWT_ACCESS_SECRET: "docker-prod-access-secret-key-12345"
+      JWT_REFRESH_SECRET: "docker-prod-refresh-secret-key-67890"
+      ACCESS_TOKEN_EXPIRES_IN: "15m"
+      REFRESH_TOKEN_EXPIRES_IN: "7d"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
