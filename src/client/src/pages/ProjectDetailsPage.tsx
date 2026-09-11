@@ -5,8 +5,8 @@ import { useSocket } from '../context/SocketContext';
 import { Project, Task, User, TaskStatus } from '../types';
 import { TaskCard } from '../components/TaskCard';
 import { TaskModal } from '../components/TaskModal';
+import { safeFetchJson } from '../config/api';
 import { ArrowLeft, Plus, FolderKanban, Activity, Layers } from 'lucide-react';
-import { ActivityFeed } from '../components/ActivityFeed';
 
 export const ProjectDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,25 +26,20 @@ export const ProjectDetailsPage: React.FC = () => {
   const fetchProjectData = async () => {
     if (!id || !accessToken) return;
     try {
-      const pRes = await fetch(`/api/projects/${id}`, {
+      const pData = await safeFetchJson(`/api/projects/${id}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      if (!pRes.ok) {
-        const errData = await pRes.json();
-        throw new Error(errData.error?.message || 'Failed to load project details');
+      if (pData?.project) {
+        setProject(pData.project);
+        setTasks(pData.project.tasks || []);
       }
 
-      const pData = await pRes.json();
-      setProject(pData.project);
-      setTasks(pData.project.tasks || []);
-
       if (canManageTask) {
-        const devRes = await fetch('/api/users?role=DEVELOPER', {
+        const devData = await safeFetchJson('/api/users?role=DEVELOPER', {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        if (devRes.ok) {
-          const devData = await devRes.json();
+        if (devData?.users) {
           setDevUsers(devData.users);
         }
       }
@@ -59,7 +54,6 @@ export const ProjectDetailsPage: React.FC = () => {
     fetchProjectData();
   }, [id, accessToken]);
 
-  // Join Socket Project Room & listen for real-time task updates
   useEffect(() => {
     if (!socket || !id) return;
 
@@ -86,16 +80,14 @@ export const ProjectDetailsPage: React.FC = () => {
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const data = await safeFetchJson(`/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) {
-        const data = await res.json();
+      if (data?.task) {
         setTasks((prev) => prev.map((t) => (t.id === taskId ? data.task : t)));
       }
     } catch (e) {
@@ -105,35 +97,21 @@ export const ProjectDetailsPage: React.FC = () => {
 
   const handleSaveTask = async (taskData: any) => {
     if (taskData.id) {
-      // Update
-      const res = await fetch(`/api/tasks/${taskData.id}`, {
+      await safeFetchJson(`/api/tasks/${taskData.id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(taskData),
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to update task');
-      }
     } else {
-      // Create
-      const res = await fetch('/api/tasks', {
+      await safeFetchJson('/api/tasks', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ ...taskData, projectId: id }),
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to create task');
-      }
     }
     await fetchProjectData();
   };
@@ -162,7 +140,6 @@ export const ProjectDetailsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header & Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <Link to="/projects" className="inline-flex items-center space-x-1.5 text-xs text-indigo-400 hover:underline">
@@ -192,7 +169,6 @@ export const ProjectDetailsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Kanban Board Columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {columns.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.status);

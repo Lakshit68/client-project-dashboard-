@@ -4,6 +4,7 @@ import { useSocket } from '../context/SocketContext';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { TaskCard } from '../components/TaskCard';
 import { Project, Task, TaskStatus } from '../types';
+import { safeFetchJson } from '../config/api';
 import {
   FolderKanban,
   CheckSquare,
@@ -30,19 +31,13 @@ export const Dashboard: React.FC = () => {
   const fetchData = async () => {
     if (!accessToken) return;
     try {
-      const [projRes, taskRes] = await Promise.all([
-        fetch('/api/projects', { headers: { Authorization: `Bearer ${accessToken}` } }),
-        fetch('/api/tasks', { headers: { Authorization: `Bearer ${accessToken}` } }),
+      const [pData, tData] = await Promise.all([
+        safeFetchJson('/api/projects', { headers: { Authorization: `Bearer ${accessToken}` } }),
+        safeFetchJson('/api/tasks', { headers: { Authorization: `Bearer ${accessToken}` } }),
       ]);
 
-      if (projRes.ok) {
-        const pData = await projRes.json();
-        setProjects(pData.projects);
-      }
-      if (taskRes.ok) {
-        const tData = await taskRes.json();
-        setTasks(tData.tasks);
-      }
+      if (pData?.projects) setProjects(pData.projects);
+      if (tData?.tasks) setTasks(tData.tasks);
     } catch (err) {
       console.error(err);
     } finally {
@@ -54,7 +49,6 @@ export const Dashboard: React.FC = () => {
     fetchData();
   }, [accessToken]);
 
-  // Listen for real-time task updates via WebSocket
   useEffect(() => {
     if (!socket) return;
     const handleTaskUpdated = (updatedTask: Task) => {
@@ -75,16 +69,14 @@ export const Dashboard: React.FC = () => {
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const data = await safeFetchJson(`/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) {
-        const data = await res.json();
+      if (data?.task) {
         setTasks((prev) => prev.map((t) => (t.id === taskId ? data.task : t)));
       }
     } catch (e) {
@@ -92,7 +84,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Metrics Calculations
   const totalProjects = projects.length;
   const totalTasks = tasks.length;
   const overdueTasksCount = tasks.filter((t) => t.isOverdue || (new Date(t.dueDate) < new Date() && t.status !== 'DONE')).length;
@@ -101,7 +92,6 @@ export const Dashboard: React.FC = () => {
   const inReviewTasksCount = tasks.filter((t) => t.status === 'IN_REVIEW').length;
   const todoTasksCount = tasks.filter((t) => t.status === 'TO_DO').length;
 
-  // Sorting for Developer Dashboard: Priority then Due Date
   const priorityOrder: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
   const sortedDevTasks = [...tasks].sort((a, b) => {
     const pA = priorityOrder[a.priority] || 0;
@@ -147,7 +137,6 @@ export const Dashboard: React.FC = () => {
       {/* ADMIN DASHBOARD VIEW */}
       {user?.role === 'ADMIN' && (
         <div className="space-y-6">
-          {/* Admin Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="glass-card p-5 rounded-2xl border border-slate-800 space-y-2">
               <div className="flex items-center justify-between text-slate-400 text-xs font-medium">

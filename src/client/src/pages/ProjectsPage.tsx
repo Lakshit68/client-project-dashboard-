@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Project, Client } from '../types';
 import { ProjectModal } from '../components/ProjectModal';
+import { safeFetchJson } from '../config/api';
 import { FolderKanban, Plus, User, ArrowRight, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -17,20 +18,16 @@ export const ProjectsPage: React.FC = () => {
   const fetchData = async () => {
     if (!accessToken) return;
     try {
-      const [projRes, clientRes] = await Promise.all([
-        fetch('/api/projects', { headers: { Authorization: `Bearer ${accessToken}` } }),
-        canCreate
-          ? fetch('/api/clients', { headers: { Authorization: `Bearer ${accessToken}` } })
-          : Promise.resolve(null),
-      ]);
+      const pData = await safeFetchJson('/api/projects', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (pData?.projects) setProjects(pData.projects);
 
-      if (projRes.ok) {
-        const pData = await projRes.json();
-        setProjects(pData.projects);
-      }
-      if (clientRes && clientRes.ok) {
-        const cData = await clientRes.json();
-        setClients(cData.clients);
+      if (canCreate) {
+        const cData = await safeFetchJson('/api/clients', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (cData?.clients) setClients(cData.clients);
       }
     } catch (e) {
       console.error(e);
@@ -44,19 +41,13 @@ export const ProjectsPage: React.FC = () => {
   }, [accessToken]);
 
   const handleCreateProject = async (projectData: { title: string; description?: string; clientId: string }) => {
-    const res = await fetch('/api/projects', {
+    await safeFetchJson('/api/projects', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(projectData),
     });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || 'Failed to create project');
-    }
 
     await fetchData();
   };
@@ -64,13 +55,11 @@ export const ProjectsPage: React.FC = () => {
   const handleDeleteProject = async (id: string) => {
     if (!confirm('Are you sure you want to delete this project?')) return;
     try {
-      const res = await fetch(`/api/projects/${id}`, {
+      await safeFetchJson(`/api/projects/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (res.ok) {
-        setProjects((prev) => prev.filter((p) => p.id !== id));
-      }
+      setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (e) {
       console.error(e);
     }
@@ -140,7 +129,6 @@ export const ProjectsPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-3 pt-3 border-t border-slate-800/80">
-                  {/* Progress Bar */}
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[11px]">
                       <span className="text-slate-400 font-medium">Progress</span>

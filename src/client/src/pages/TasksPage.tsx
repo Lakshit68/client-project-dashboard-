@@ -6,6 +6,7 @@ import { Task, TaskStatus, Project, User } from '../types';
 import { FilterBar } from '../components/FilterBar';
 import { TaskCard } from '../components/TaskCard';
 import { TaskModal } from '../components/TaskModal';
+import { safeFetchJson } from '../config/api';
 import { CheckSquare, Plus } from 'lucide-react';
 
 export const TasksPage: React.FC = () => {
@@ -28,31 +29,15 @@ export const TasksPage: React.FC = () => {
       const queryString = searchParams.toString();
       const url = `/api/tasks${queryString ? `?${queryString}` : ''}`;
 
-      const [taskRes, projRes] = await Promise.all([
-        fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } }),
-        canCreateTask
-          ? fetch('/api/projects', { headers: { Authorization: `Bearer ${accessToken}` } })
-          : Promise.resolve(null),
-      ]);
-
-      if (taskRes.ok) {
-        const tData = await taskRes.json();
-        setTasks(tData.tasks);
-      }
-
-      if (projRes && projRes.ok) {
-        const pData = await projRes.json();
-        setProjects(pData.projects);
-      }
+      const tData = await safeFetchJson(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (tData?.tasks) setTasks(tData.tasks);
 
       if (canCreateTask) {
-        const devRes = await fetch('/api/users?role=DEVELOPER', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (devRes.ok) {
-          const dData = await devRes.json();
-          setDevUsers(dData.users);
-        }
+        const pData = await safeFetchJson('/api/projects', { headers: { Authorization: `Bearer ${accessToken}` } });
+        if (pData?.projects) setProjects(pData.projects);
+
+        const dData = await safeFetchJson('/api/users?role=DEVELOPER', { headers: { Authorization: `Bearer ${accessToken}` } });
+        if (dData?.users) setDevUsers(dData.users);
       }
     } catch (err) {
       console.error(err);
@@ -65,7 +50,6 @@ export const TasksPage: React.FC = () => {
     fetchTasks();
   }, [accessToken, searchParams]);
 
-  // Real-time task update listener
   useEffect(() => {
     if (!socket) return;
 
@@ -87,16 +71,14 @@ export const TasksPage: React.FC = () => {
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const data = await safeFetchJson(`/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) {
-        const data = await res.json();
+      if (data?.task) {
         setTasks((prev) => prev.map((t) => (t.id === taskId ? data.task : t)));
       }
     } catch (e) {
@@ -106,33 +88,21 @@ export const TasksPage: React.FC = () => {
 
   const handleSaveTask = async (taskData: any) => {
     if (taskData.id) {
-      const res = await fetch(`/api/tasks/${taskData.id}`, {
+      await safeFetchJson(`/api/tasks/${taskData.id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(taskData),
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to update task');
-      }
     } else {
-      const res = await fetch('/api/tasks', {
+      await safeFetchJson('/api/tasks', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(taskData),
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to create task');
-      }
     }
     await fetchTasks();
   };
@@ -166,7 +136,6 @@ export const TasksPage: React.FC = () => {
         )}
       </div>
 
-      {/* Shareable URL Filter Bar */}
       <FilterBar />
 
       {tasks.length === 0 ? (
