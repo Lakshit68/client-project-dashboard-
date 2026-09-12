@@ -3,6 +3,11 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+// Clean process.env.DATABASE_URL immediately for Prisma initialization
+if (process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL.trim().replace(/^["']|["']$/g, '');
+}
+
 const getCleanUrl = (url: string | undefined, fallback: string): string => {
   if (!url) return fallback;
   return url.trim().replace(/^["']|["']$/g, '');

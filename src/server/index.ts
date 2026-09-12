@@ -1,6 +1,6 @@
+import { env } from './config/env.js';
 import http from 'http';
 import app from './app.js';
-import { env } from './config/env.js';
 import { socketService } from './services/socket.service.js';
 import { startOverdueTaskScheduler } from './services/scheduler.service.js';
 
