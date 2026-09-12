@@ -14,9 +14,12 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
 
   console.error('Unhandled Server Error:', err);
 
+  // Return descriptive message for database/initialization errors
+  const message = err?.message || 'Internal server error';
+
   return res.status(500).json({
     error: {
-      message: 'Internal server error',
+      message,
       statusCode: 500,
     },
   });
